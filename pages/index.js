@@ -29,6 +29,8 @@ export default function Hub() {
   const [showNotif,setShowNotif]=useState(false);
   const [wfRunning,setWfRunning]=useState(false);
   const [wfResult,setWfResult]=useState(null);
+  const [campaigns,setCampaigns]=useState([]);
+  const [campLoading,setCampLoading]=useState(false);
 
   const show=(msg,type="ok")=>{setToast({msg,type});setLogs(p=>[{msg,type,time:new Date().toLocaleTimeString("es-CO")},...p].slice(0,50));setTimeout(()=>setToast(null),4000);};
 
@@ -59,6 +61,10 @@ export default function Hub() {
 
   async function runHealthCheck(){show("Health check...");try{const r=await fetch("/api/hub?action=health-check").then(r=>r.json());setHealthCheck(r);show("Health check completado");}catch{show("Health check fallo","err");}}
 
+  async function loadCampaigns(){setCampLoading(true);try{const r=await fetch("/api/hub?action=campaigns").then(r=>r.json());setCampaigns(r.campaigns||[]);}catch{}setCampLoading(false);}
+
+  async function toggleCamp(id,activate){show(activate?"Activando...":"Pausando...");try{const r=await fetch("/api/hub?action=toggle-campaign",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,activate})}).then(r=>r.json());show(r.ok?(activate?"Campana activada":"Campana pausada"):(r.error||"Error"),r.ok?"ok":"err");loadCampaigns();setTimeout(load,2000);}catch{show("Error","err");}}
+
   const agents=data?.agents?Object.values(data.agents):[];
   const leader=data?.leader||{};
   const ag=data?.agents||{};
@@ -75,7 +81,7 @@ export default function Hub() {
     return 0;
   }
 
-  const navs=[{id:"office",i:"OFF",l:"Oficina"},{id:"command",i:"CMD",l:"Comando"},{id:"pipeline",i:"PIP",l:"Pipeline"},{id:"shopify",i:"SHP",l:"Shopify"},{id:"analytics",i:"ANL",l:"Analytics"},{id:"leader",i:"LDR",l:"Leader"},{id:"logs",i:"LOG",l:"Logs"}];
+  const navs=[{id:"office",i:"OFF",l:"Oficina"},{id:"command",i:"CMD",l:"Comando"},{id:"campaigns",i:"ADS",l:"Campanas"},{id:"pipeline",i:"PIP",l:"Pipeline"},{id:"shopify",i:"SHP",l:"Shopify"},{id:"analytics",i:"ANL",l:"Analytics"},{id:"leader",i:"LDR",l:"Leader"},{id:"logs",i:"LOG",l:"Logs"}];
   const dAgent=detail?agents.find(a=>a.id===detail):null;
 
   return (<>
@@ -240,6 +246,54 @@ export default function Hub() {
             </div>}
             {!healthCheck&&<div style={{padding:12,textAlign:"center",color:"#111827",fontSize:9}}>Click Ejecutar para medir latencia</div>}
           </div>
+        </div>}
+
+        {/* ═══ CAMPAIGNS ═══ */}
+        {sec==="campaigns"&&<div className="au" ref={el=>{if(el&&campaigns.length===0&&!campLoading)loadCampaigns()}}>
+          {campaigns.length===0&&!campLoading&&<div style={{textAlign:"center",marginBottom:14}}><button className="btn" onClick={loadCampaigns}>Cargar campanas</button></div>}
+          {campLoading&&<div style={{textAlign:"center",padding:24,color:"#111827",fontSize:10}}>Cargando...</div>}
+
+          {/* KPI strip */}
+          {campaigns.length>0&&<div className="card" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",padding:0,marginBottom:14,overflow:"hidden"}}>
+            {[{l:"Total",v:campaigns.length,c:"#7C3AED"},{l:"Activas",v:campaigns.filter(c=>c.status==="ACTIVE").length,c:"#10B981"},{l:"Pausadas",v:campaigns.filter(c=>c.status==="PAUSED").length,c:"#F59E0B"},{l:"Gasto/dia",v:fUSD(campaigns.reduce((s,c)=>s+(c.status==="ACTIVE"?c.budget_daily_usd:0),0)),c:"#EF4444"}].map((k,i)=><div key={i} style={{padding:"12px 8px",textAlign:"center",borderRight:i<3?"1px solid rgba(30,41,59,.2)":"none"}}><div style={{fontSize:7,color:"#334155",fontWeight:600,textTransform:"uppercase",marginBottom:3}}>{k.l}</div><div style={{fontSize:18,fontWeight:800,color:k.c}}>{k.v}</div></div>)}
+          </div>}
+
+          {/* Campaign list */}
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {campaigns.map((c,i)=>{
+              const statusC={ACTIVE:"#10B981",PAUSED:"#F59E0B",ARCHIVED:"#475569"};
+              return <div key={c.id||i} className="card" style={{padding:14,borderLeft:`3px solid ${statusC[c.status]||"#334155"}`,animation:`fadeUp .3s ease ${i*.04}s both`}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <div style={{flex:1}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                      <span style={{fontSize:12,fontWeight:700,color:"#F1F5F9"}}>{c.product_name}</span>
+                      <span style={{fontSize:8,padding:"2px 6px",borderRadius:4,background:`${statusC[c.status]}10`,color:statusC[c.status],fontWeight:700}}>{c.status}</span>
+                    </div>
+                    <div style={{display:"flex",gap:10,fontSize:9,color:"#334155"}}>
+                      <span>{c.country_code}</span>
+                      <span>{fUSD(c.budget_daily_usd)}/dia</span>
+                      <span>{c.platform||"meta"}</span>
+                      {c.ad_copy_used&&typeof c.ad_copy_used==="object"&&<span style={{color:"#7C3AED"}}>{c.ad_copy_used.angle||""}</span>}
+                      <span>{timeAgo(c.created_at)}</span>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:6}}>
+                    <button className="btn" onClick={()=>toggleCamp(c.id,c.status!=="ACTIVE")} style={{fontSize:9,padding:"5px 10px",color:c.status==="ACTIVE"?"#F59E0B":"#10B981",borderColor:c.status==="ACTIVE"?"#F59E0B20":"#10B98120"}}>
+                      {c.status==="ACTIVE"?"Pausar":"Activar"}
+                    </button>
+                    <a href={`https://ads-agent-nine.vercel.app`} target="_blank" rel="noopener noreferrer" className="btn" style={{fontSize:9,padding:"5px 10px",textDecoration:"none"}}>Detalles</a>
+                  </div>
+                </div>
+              </div>;
+            })}
+          </div>
+
+          {campaigns.length===0&&!campLoading&&<div className="card" style={{padding:32,textAlign:"center"}}><div style={{fontSize:11,color:"#334155",marginBottom:10}}>Sin campanas. Usa el Autopilot del Ads Agent para crear.</div><a href="https://ads-agent-nine.vercel.app" target="_blank" rel="noopener noreferrer" className="btn-glow" style={{display:"inline-block",padding:"10px 20px",textDecoration:"none",fontSize:11}}>Ir al Ads Agent</a></div>}
+
+          {/* Quick action */}
+          {campaigns.length>0&&<div style={{display:"flex",gap:8,marginTop:14}}>
+            <button className="btn" onClick={()=>runAction("run-monitor","Monitorear")} disabled={!!actLoad} style={{flex:1,color:"#7C3AED",borderColor:"#7C3AED15"}}>{actLoad==="run-monitor"?"...":"Ejecutar monitoreo (pause/scale automatico)"}</button>
+          </div>}
         </div>}
 
         {/* ═══ PIPELINE ═══ */}
