@@ -84,6 +84,14 @@ export default function Hub() {
   const navs=[{id:"office",i:"OFF",l:"Oficina"},{id:"command",i:"CMD",l:"Comando"},{id:"campaigns",i:"ADS",l:"Campanas"},{id:"pipeline",i:"PIP",l:"Pipeline"},{id:"shopify",i:"SHP",l:"Shopify"},{id:"analytics",i:"ANL",l:"Analytics"},{id:"leader",i:"LDR",l:"Leader"},{id:"logs",i:"LOG",l:"Logs"}];
   const dAgent=detail?agents.find(a=>a.id===detail):null;
 
+  /* Agent character configs for office view */
+  const charCfg = {
+    dropshipping: { icon:"D", color:"#3B82F6", hat:"detective", tool:"magnify", skinTone:"#FBBF7D", label:"Hunter" },
+    landing: { icon:"L", color:"#10B981", hat:"hardhat", tool:"blueprint", skinTone:"#F0C9A0", label:"Builder" },
+    ads: { icon:"A", color:"#7C3AED", hat:"headset", tool:"megaphone", skinTone:"#DEB887", label:"Marketer" },
+    leader: { icon:"K", color:"#F59E0B", hat:"crown", tool:"clipboard", skinTone:"#F5CBA7", label:"Boss" },
+  };
+
   return (<>
     <Head><title>Oficina Virtual — Kily&apos;s Agents</title></Head>
     <style dangerouslySetInnerHTML={{__html:`
@@ -99,6 +107,278 @@ export default function Hub() {
       .glass{background:rgba(3,7,18,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
       .mb{padding:10px;background:rgba(3,7,18,.5);border-radius:10px;border:1px solid rgba(30,41,59,.15)}
       ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#1E293B;border-radius:2px}
+
+      /* ======= VIRTUAL OFFICE CHARACTERS ======= */
+      @keyframes blink{0%,42%,58%,100%{transform:scaleY(1)}50%{transform:scaleY(0.08)}}
+      @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+      @keyframes floatWorking{0%,100%{transform:translateY(0) rotate(-2deg)}25%{transform:translateY(-4px) rotate(1deg)}50%{transform:translateY(-8px) rotate(-1deg)}75%{transform:translateY(-3px) rotate(2deg)}}
+      @keyframes typing{0%,100%{opacity:.3}50%{opacity:1}}
+      @keyframes screenGlow{0%,100%{box-shadow:0 0 8px var(--ag-c,#3B82F6)20}50%{box-shadow:0 0 20px var(--ag-c,#3B82F6)40}}
+      @keyframes deskPulse{0%,100%{box-shadow:0 2px 12px rgba(0,0,0,.3)}50%{box-shadow:0 2px 20px var(--ag-c,#3B82F6)15}}
+      @keyframes waveHand{0%,100%{transform:rotate(0deg)}25%{transform:rotate(14deg)}75%{transform:rotate(-8deg)}}
+      @keyframes flowDot{0%{offset-distance:0%;opacity:0}10%{opacity:1}90%{opacity:1}100%{offset-distance:100%;opacity:0}}
+      @keyframes statusPing{0%{transform:scale(1);opacity:1}100%{transform:scale(2.5);opacity:0}}
+      @keyframes appear{from{opacity:0;transform:scale(.7) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+      @keyframes hatBob{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-2px) rotate(3deg)}}
+      @keyframes toolSwing{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+      @keyframes mouthTalk{0%,60%,100%{transform:scaleY(1)}30%{transform:scaleY(1.8)}}
+      @keyframes chairSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+      @keyframes coffeeSmoke{0%{opacity:0;transform:translateY(0) scale(.5)}50%{opacity:.4;transform:translateY(-8px) scale(1)}100%{opacity:0;transform:translateY(-16px) scale(.6)}}
+
+      .office-floor{
+        background:
+          radial-gradient(circle at 50% 120%, rgba(124,58,237,.04) 0%, transparent 60%),
+          repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(30,41,59,.08) 39px, rgba(30,41,59,.08) 40px),
+          repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(30,41,59,.08) 39px, rgba(30,41,59,.08) 40px);
+        border-radius:16px;
+        position:relative;
+        overflow:hidden;
+      }
+      .office-floor::before{
+        content:'';position:absolute;inset:0;
+        background:radial-gradient(ellipse at 50% 100%, rgba(124,58,237,.06) 0%, transparent 70%);
+        pointer-events:none;
+      }
+
+      .agent-workspace{
+        display:flex;flex-direction:column;align-items:center;cursor:pointer;
+        transition:transform .3s ease;position:relative;
+      }
+      .agent-workspace:hover{transform:scale(1.05)}
+      .agent-workspace:hover .agent-nameplate{background:rgba(255,255,255,.08)}
+
+      .agent-char{position:relative;width:90px;text-align:center;}
+      .agent-float{animation:float 3s ease-in-out infinite}
+      .agent-float-working{animation:floatWorking 1.5s ease-in-out infinite}
+
+      .agent-head{
+        width:48px;height:48px;border-radius:50%;margin:0 auto;position:relative;
+        background:var(--skin,#FBBF7D);
+        box-shadow:inset -3px -3px 6px rgba(0,0,0,.15), inset 2px 2px 4px rgba(255,255,255,.2);
+      }
+      .agent-eyes{position:absolute;top:42%;display:flex;gap:10px;justify-content:center;width:100%;}
+      .agent-eye{
+        width:6px;height:7px;background:#1E293B;border-radius:50%;
+        animation:blink 3.5s ease-in-out infinite;
+        box-shadow:inset 1px 1px 1px rgba(255,255,255,.3);
+      }
+      .agent-eye.right{animation-delay:.1s}
+      .agent-pupil{
+        position:absolute;width:2px;height:2px;background:#fff;border-radius:50%;
+        top:1px;right:1px;
+      }
+      .agent-mouth{
+        position:absolute;bottom:28%;left:50%;transform:translateX(-50%);
+        width:10px;height:5px;border-bottom:2.5px solid #94532A;border-radius:0 0 50% 50%;
+      }
+      .agent-mouth.talking{animation:mouthTalk .4s ease infinite}
+      .agent-cheek{
+        position:absolute;bottom:32%;width:7px;height:4px;border-radius:50%;
+        background:rgba(255,120,100,.25);
+      }
+      .agent-cheek.left{left:15%}
+      .agent-cheek.right{right:15%}
+
+      .agent-body{
+        width:38px;height:24px;margin:-3px auto 0;border-radius:16px 16px 4px 4px;
+        position:relative;
+        box-shadow:inset -2px -2px 4px rgba(0,0,0,.2), inset 1px 1px 3px rgba(255,255,255,.1);
+      }
+      .agent-arm{
+        position:absolute;top:4px;width:10px;height:16px;border-radius:5px;
+        opacity:.85;
+      }
+      .agent-arm.left{left:-7px;transform:rotate(8deg);animation:waveHand 4s ease-in-out infinite}
+      .agent-arm.right{right:-7px;transform:rotate(-8deg);animation:waveHand 4s ease-in-out infinite reverse}
+
+      /* Hats/accessories */
+      .agent-hat{position:absolute;top:-8px;left:50%;transform:translateX(-50%);animation:hatBob 4s ease-in-out infinite}
+      .hat-detective{
+        width:32px;height:14px;background:#5B4A3F;border-radius:12px 12px 2px 2px;
+        box-shadow:0 -2px 0 #4A3C33;
+      }
+      .hat-detective::after{
+        content:'';position:absolute;bottom:-3px;left:-4px;right:-4px;height:4px;
+        background:#4A3C33;border-radius:2px;
+      }
+      .hat-hardhat{
+        width:30px;height:16px;background:#F59E0B;border-radius:14px 14px 2px 2px;
+        border-bottom:3px solid #D97706;
+      }
+      .hat-headset{
+        width:36px;height:18px;border:2px solid #7C3AED;border-bottom:none;border-radius:18px 18px 0 0;
+      }
+      .hat-headset::after{
+        content:'';position:absolute;bottom:-2px;left:-3px;width:8px;height:8px;
+        background:#7C3AED;border-radius:50%;
+      }
+      .hat-crown{
+        width:28px;height:14px;position:relative;
+      }
+      .hat-crown::before{
+        content:'';position:absolute;bottom:0;left:0;right:0;height:6px;
+        background:#F59E0B;border-radius:0 0 2px 2px;
+      }
+      .hat-crown::after{
+        content:'';position:absolute;top:0;left:2px;right:2px;height:10px;
+        background:#F59E0B;
+        clip-path:polygon(0% 100%, 15% 0%, 30% 60%, 50% 0%, 70% 60%, 85% 0%, 100% 100%);
+      }
+
+      /* Tool accessories */
+      .agent-tool{position:absolute;animation:toolSwing 3s ease-in-out infinite}
+      .tool-magnify{
+        right:-16px;top:12px;width:16px;height:16px;
+        border:2.5px solid #3B82F6;border-radius:50%;
+      }
+      .tool-magnify::after{
+        content:'';position:absolute;bottom:-6px;right:-2px;width:2.5px;height:8px;
+        background:#3B82F6;transform:rotate(-45deg);border-radius:1px;
+      }
+      .tool-blueprint{
+        left:-18px;top:16px;width:14px;height:10px;
+        background:#10B98130;border:1.5px solid #10B981;border-radius:1px;
+      }
+      .tool-blueprint::before{
+        content:'';position:absolute;top:2px;left:2px;right:2px;bottom:2px;
+        border:1px dashed #10B98150;
+      }
+      .tool-megaphone{
+        right:-18px;top:10px;width:0;height:0;
+        border-top:5px solid transparent;border-bottom:5px solid transparent;
+        border-left:12px solid #7C3AED;border-radius:0 0 2px 0;
+      }
+      .tool-megaphone::before{
+        content:'';position:absolute;left:-14px;top:-3px;width:4px;height:6px;
+        background:#9333EA;border-radius:1px;
+      }
+      .tool-clipboard{
+        left:-14px;top:14px;width:11px;height:14px;
+        background:#F59E0B20;border:1.5px solid #F59E0B;border-radius:1.5px;
+      }
+      .tool-clipboard::before{
+        content:'';position:absolute;top:-3px;left:50%;transform:translateX(-50%);
+        width:6px;height:3px;background:#F59E0B;border-radius:1px;
+      }
+
+      /* Desk */
+      .agent-desk{
+        width:110px;height:14px;margin-top:4px;
+        background:linear-gradient(180deg, #1E293B 0%, #0F172A 100%);
+        border-radius:4px;border:1px solid rgba(255,255,255,.04);
+        position:relative;
+        animation:deskPulse 4s ease infinite;
+      }
+      .agent-desk::before{
+        content:'';position:absolute;left:8px;right:8px;top:-22px;height:16px;
+        background:rgba(0,0,0,.6);border-radius:2px 2px 0 0;border:1px solid rgba(255,255,255,.05);
+        border-bottom:none;
+      }
+      .desk-screen{
+        position:absolute;left:12px;right:12px;top:-20px;height:12px;
+        background:rgba(0,0,0,.8);border-radius:1px;overflow:hidden;
+        display:flex;align-items:center;justify-content:center;
+      }
+      .desk-screen-content{
+        display:flex;gap:2px;align-items:center;
+      }
+      .desk-screen-bar{
+        width:3px;border-radius:1px;animation:typing .8s ease infinite;
+      }
+      .desk-legs{
+        position:absolute;bottom:-8px;left:15px;right:15px;height:8px;
+        display:flex;justify-content:space-between;
+      }
+      .desk-leg{
+        width:2px;height:8px;background:#0F172A;border-radius:0 0 1px 1px;
+      }
+
+      /* Chair */
+      .agent-chair{
+        position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
+        width:20px;height:6px;background:#1E293B;border-radius:3px;
+        border:1px solid rgba(255,255,255,.03);
+      }
+
+      /* Status */
+      .agent-status{
+        width:10px;height:10px;border-radius:50%;
+        position:absolute;top:0;right:10px;
+        border:2px solid #0F172A;z-index:2;
+      }
+      .agent-status.online{background:#10B981}
+      .agent-status.offline{background:#EF4444}
+      .agent-status-ping{
+        position:absolute;top:0;right:10px;width:10px;height:10px;border-radius:50%;
+        z-index:1;
+      }
+      .agent-status-ping.online{background:#10B981;animation:statusPing 2s ease infinite}
+
+      .agent-nameplate{
+        margin-top:14px;padding:3px 10px;border-radius:6px;
+        background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);
+        transition:all .3s;
+      }
+      .agent-nameplate-name{font-size:10px;font-weight:700;color:#E2E8F0;text-align:center}
+      .agent-nameplate-role{font-size:7px;color:#475569;text-align:center;margin-top:1px}
+
+      /* Metrics mini */
+      .agent-mini-metrics{
+        margin-top:6px;display:flex;gap:4px;justify-content:center;
+      }
+      .agent-mini-stat{
+        padding:2px 6px;border-radius:4px;background:rgba(0,0,0,.3);
+        font-size:8px;font-weight:700;
+      }
+
+      /* Flow paths */
+      .flow-container{position:relative;height:30px;margin:0 20px}
+      .flow-path{
+        position:absolute;top:50%;left:0;right:0;height:2px;
+        background:linear-gradient(90deg, var(--from-c), var(--to-c));
+        opacity:.15;border-radius:1px;
+      }
+      .flow-dot{
+        position:absolute;top:50%;transform:translateY(-50%);
+        width:6px;height:6px;border-radius:50%;
+      }
+
+      /* Office title */
+      .office-title{
+        font-size:11px;font-weight:800;color:#475569;text-transform:uppercase;
+        letter-spacing:3px;text-align:center;margin-bottom:4px;
+      }
+      .office-subtitle{
+        font-size:8px;color:#1E293B;text-align:center;margin-bottom:16px;
+      }
+
+      /* Coffee mug */
+      .coffee-mug{
+        position:absolute;right:4px;top:-8px;width:8px;height:7px;
+        background:#8B7355;border-radius:0 0 2px 2px;border:1px solid #6B5B45;
+      }
+      .coffee-mug::after{
+        content:'';position:absolute;right:-4px;top:1px;width:3px;height:4px;
+        border:1px solid #6B5B45;border-left:none;border-radius:0 3px 3px 0;
+      }
+      .coffee-smoke{
+        position:absolute;right:6px;top:-16px;width:4px;height:10px;
+      }
+      .coffee-smoke span{
+        position:absolute;bottom:0;width:3px;height:3px;
+        border-radius:50%;background:rgba(148,163,184,.15);
+        animation:coffeeSmoke 2s ease infinite;
+      }
+      .coffee-smoke span:nth-child(2){left:2px;animation-delay:.7s}
+
+      /* Score badge on character */
+      .char-score{
+        position:absolute;top:-4px;left:4px;
+        width:22px;height:22px;border-radius:50%;
+        display:flex;align-items:center;justify-content:center;
+        font-size:8px;font-weight:900;color:#fff;
+        border:2px solid #0F172A;z-index:3;
+      }
     `}}/>
 
     {toast&&<div style={{position:"fixed",top:16,right:16,zIndex:9999,padding:"10px 16px",borderRadius:10,background:toast.type==="err"?"rgba(127,29,29,.95)":"rgba(6,78,59,.95)",color:"#fff",fontSize:11,fontWeight:600,boxShadow:"0 20px 60px rgba(0,0,0,.6)",borderLeft:`3px solid ${toast.type==="err"?"#EF4444":"#10B981"}`,maxWidth:300}} className="sr">{toast.msg}</div>}
@@ -154,26 +434,138 @@ export default function Hub() {
 
         {/* ═══ OFFICE ═══ */}
         {sec==="office"&&<div className="au">
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
-            {agents.map((a,i)=>{const st=sMap[a.state]||sMap.idle,sc=aScore(a.id),scC=sc>=80?"#10B981":sc>=50?"#F59E0B":"#EF4444";return <div key={a.id} className="card" onClick={()=>setDetail(detail===a.id?null:a.id)} style={{padding:0,overflow:"hidden",cursor:"pointer",borderColor:detail===a.id?`${a.color}30`:undefined,animation:`fadeUp .4s ease ${i*.06}s both`}}>
-              <div style={{height:2,background:a.online?`linear-gradient(90deg,${a.color},transparent)`:"#111827"}}/>
-              <div style={{padding:"12px 12px 10px"}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                  <div style={{position:"relative"}}><div style={{width:36,height:36,borderRadius:9,background:a.online?`${a.color}0A`:"#080D17",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:900,color:a.online?a.color:"#111827",animation:st.p?"breathe 2s ease infinite":"none"}}>{a.avatar}</div><div style={{position:"absolute",bottom:-1,right:-1,width:9,height:9,borderRadius:"50%",border:"2px solid rgba(15,23,42,.5)",background:st.c,animation:st.p?"pulse 1.5s infinite":"none"}}/></div>
-                  <div style={{flex:1}}><div style={{fontSize:11,fontWeight:700,color:"#E2E8F0"}}>{a.name}</div><div style={{fontSize:7,color:"#334155"}}>{a.role}</div></div>
-                  <div style={{width:30,height:30,borderRadius:8,background:`${scC}08`,border:`1.5px solid ${scC}20`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:scC}}>{sc}</div>
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
-                  {a.id==="dropshipping"&&<><div className="mb"><div style={{fontSize:6,color:"#111827",fontWeight:600}}>PRODUCTOS</div><div style={{fontSize:15,fontWeight:800,color:"#F1F5F9"}}>{a.metrics?.totalProducts||0}</div></div><div className="mb"><div style={{fontSize:6,color:"#111827",fontWeight:600}}>ULTIMA</div><div style={{fontSize:11,fontWeight:700,color:"#3B82F6"}}>{timeAgo(a.metrics?.lastRun)}</div></div></>}
-                  {a.id==="landing"&&<><div className="mb"><div style={{fontSize:6,color:"#111827",fontWeight:600}}>PUBLICADAS</div><div style={{fontSize:15,fontWeight:800,color:"#F1F5F9"}}>{a.metrics?.published||0}</div></div><div className="mb"><div style={{fontSize:6,color:"#111827",fontWeight:600}}>HOY</div><div style={{fontSize:15,fontWeight:800,color:"#10B981"}}>{a.metrics?.last24h||0}</div></div></>}
-                  {a.id==="ads"&&<><div className="mb"><div style={{fontSize:6,color:"#111827",fontWeight:600}}>ACTIVAS</div><div style={{fontSize:15,fontWeight:800,color:(a.metrics?.active||0)>0?"#10B981":"#EF4444"}}>{a.metrics?.active||0}</div></div><div className="mb"><div style={{fontSize:6,color:"#111827",fontWeight:600}}>ROAS</div><div style={{fontSize:15,fontWeight:800,color:"#7C3AED"}}>{a.metrics?.weekRoas||0}x</div></div></>}
-                  {a.id==="leader"&&<><div className="mb"><div style={{fontSize:6,color:"#111827",fontWeight:600}}>ISSUES</div><div style={{fontSize:15,fontWeight:800,color:a.metrics?.critical>0?"#EF4444":"#F59E0B"}}>{a.metrics?.issues||0}</div></div><div className="mb"><div style={{fontSize:6,color:"#111827",fontWeight:600}}>MEJORAS</div><div style={{fontSize:15,fontWeight:800,color:"#10B981"}}>{a.metrics?.suggestions||0}</div></div></>}
-                </div>
-              </div>
-            </div>;})}
+          {/* Virtual Office */}
+          <div className="office-floor" style={{padding:"24px 16px 20px",marginBottom:14}}>
+            <div className="office-title">Kily&apos;s Virtual Office</div>
+            <div className="office-subtitle">{agents.filter(a=>a.online).length} agentes activos trabajando</div>
+
+            {/* Agent Characters Row */}
+            <div style={{display:"flex",justifyContent:"space-around",alignItems:"flex-end",paddingBottom:16,position:"relative"}}>
+              {agents.map((a,i)=>{
+                const cfg = charCfg[a.id] || { icon:"?", color:"#475569", hat:"detective", tool:"magnify", skinTone:"#FBBF7D", label:"Agent" };
+                const st = sMap[a.state] || sMap.idle;
+                const sc = aScore(a.id);
+                const scC = sc>=80?"#10B981":sc>=50?"#F59E0B":"#EF4444";
+                const isWorking = a.state === "working";
+                const isOnline = a.online;
+
+                return <div key={a.id} className="agent-workspace" onClick={()=>setDetail(detail===a.id?null:a.id)}
+                  style={{animation:`appear .5s ease ${i*0.1}s both`, "--ag-c": cfg.color, opacity: isOnline ? 1 : 0.4}}>
+
+                  {/* Score badge */}
+                  <div className="char-score" style={{background:scC}}>{sc}</div>
+
+                  {/* Status indicator */}
+                  {isOnline && <div className="agent-status-ping online"/>}
+                  <div className={`agent-status ${isOnline?"online":"offline"}`}/>
+
+                  {/* Character */}
+                  <div className="agent-char">
+                    <div className={isWorking?"agent-float-working":"agent-float"} style={{animationDelay:`${i*0.4}s`}}>
+
+                      {/* Hat */}
+                      <div className="agent-hat" style={{animationDelay:`${i*0.5}s`}}>
+                        <div className={`hat-${cfg.hat}`}/>
+                      </div>
+
+                      {/* Head */}
+                      <div className="agent-head" style={{"--skin": cfg.skinTone}}>
+                        <div className="agent-eyes">
+                          <div className="agent-eye" style={{animationDelay:`${i*0.7}s`}}>
+                            <div className="agent-pupil"/>
+                          </div>
+                          <div className="agent-eye right" style={{animationDelay:`${i*0.7+0.1}s`}}>
+                            <div className="agent-pupil"/>
+                          </div>
+                        </div>
+                        <div className={`agent-mouth${isWorking?" talking":""}`}/>
+                        <div className="agent-cheek left"/>
+                        <div className="agent-cheek right"/>
+                      </div>
+
+                      {/* Body */}
+                      <div className="agent-body" style={{background:cfg.color}}>
+                        <div className="agent-arm left" style={{background:cfg.color}}/>
+                        <div className="agent-arm right" style={{background:cfg.color}}/>
+                      </div>
+
+                      {/* Tool */}
+                      <div className={`agent-tool tool-${cfg.tool}`} style={{animationDelay:`${i*0.3}s`}}/>
+                    </div>
+                  </div>
+
+                  {/* Desk area */}
+                  <div style={{position:"relative",marginTop:6}}>
+                    <div className="agent-desk" style={{"--ag-c": cfg.color}}>
+                      <div className="desk-screen">
+                        <div className="desk-screen-content">
+                          {[...Array(4)].map((_,j)=><div key={j} className="desk-screen-bar" style={{
+                            height: `${3 + Math.random()*5}px`,
+                            background: cfg.color,
+                            opacity: isWorking ? 1 : 0.3,
+                            animationDelay: `${j*0.15}s`
+                          }}/>)}
+                        </div>
+                      </div>
+                      <div className="desk-legs"><div className="desk-leg"/><div className="desk-leg"/></div>
+                      {/* Coffee mug on desk (only for leader) */}
+                      {a.id==="leader"&&<>
+                        <div className="coffee-mug"/>
+                        <div className="coffee-smoke"><span/><span/></div>
+                      </>}
+                    </div>
+                  </div>
+
+                  {/* Nameplate */}
+                  <div className="agent-nameplate">
+                    <div className="agent-nameplate-name" style={{color:cfg.color}}>{a.name}</div>
+                    <div className="agent-nameplate-role">{cfg.label} {st.l !== "Standby" && <span style={{color:st.c}}>({st.l})</span>}</div>
+                  </div>
+
+                  {/* Mini metrics */}
+                  <div className="agent-mini-metrics">
+                    {a.id==="dropshipping"&&<>
+                      <span className="agent-mini-stat" style={{color:"#3B82F6"}}>{a.metrics?.totalProducts||0} prod</span>
+                    </>}
+                    {a.id==="landing"&&<>
+                      <span className="agent-mini-stat" style={{color:"#10B981"}}>{a.metrics?.published||0} pub</span>
+                    </>}
+                    {a.id==="ads"&&<>
+                      <span className="agent-mini-stat" style={{color:"#7C3AED"}}>{a.metrics?.active||0} act</span>
+                      <span className="agent-mini-stat" style={{color:"#A855F7"}}>{a.metrics?.weekRoas||0}x</span>
+                    </>}
+                    {a.id==="leader"&&<>
+                      <span className="agent-mini-stat" style={{color:a.metrics?.critical>0?"#EF4444":"#F59E0B"}}>{a.metrics?.issues||0} iss</span>
+                    </>}
+                  </div>
+                </div>;
+              })}
+
+              {/* Flow connections between agents (SVG arrows on the floor) */}
+              {agents.length>=3 && <svg style={{position:"absolute",bottom:60,left:0,right:0,height:30,pointerEvents:"none"}} viewBox="0 0 800 30" preserveAspectRatio="none">
+                {/* Path lines */}
+                <line x1="140" y1="15" x2="300" y2="15" stroke="#3B82F6" strokeWidth="1" opacity=".15" strokeDasharray="4 3"/>
+                <line x1="340" y1="15" x2="500" y2="15" stroke="#10B981" strokeWidth="1" opacity=".15" strokeDasharray="4 3"/>
+                <line x1="540" y1="15" x2="680" y2="15" stroke="#7C3AED" strokeWidth="1" opacity=".15" strokeDasharray="4 3"/>
+
+                {/* Animated dots */}
+                {ag.dropshipping?.online&&<circle r="3" fill="#3B82F6" opacity=".8">
+                  <animateMotion dur="2.5s" repeatCount="indefinite" path="M140,15 L300,15"/>
+                  <animate attributeName="opacity" values="0;1;1;0" dur="2.5s" repeatCount="indefinite"/>
+                </circle>}
+                {ag.landing?.online&&<circle r="3" fill="#10B981" opacity=".8">
+                  <animateMotion dur="2.5s" repeatCount="indefinite" path="M340,15 L500,15" begin="0.8s"/>
+                  <animate attributeName="opacity" values="0;1;1;0" dur="2.5s" repeatCount="indefinite" begin="0.8s"/>
+                </circle>}
+                {ag.ads?.online&&<circle r="3" fill="#7C3AED" opacity=".8">
+                  <animateMotion dur="2.5s" repeatCount="indefinite" path="M540,15 L680,15" begin="1.6s"/>
+                  <animate attributeName="opacity" values="0;1;1;0" dur="2.5s" repeatCount="indefinite" begin="1.6s"/>
+                </circle>}
+              </svg>}
+            </div>
           </div>
 
-          {/* Flow */}
+          {/* Flow Pipeline Strip */}
           <div className="card" style={{padding:14,marginBottom:14}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
               {[{a:"D",c:"#3B82F6",v:ag.dropshipping?.metrics?.totalProducts||0,l:"productos",on:ag.dropshipping?.online},{a:"L",c:"#10B981",v:ag.landing?.metrics?.published||0,l:"landings",on:ag.landing?.online},{a:"A",c:"#7C3AED",v:ag.ads?.metrics?.total||0,l:"campanas",on:ag.ads?.online},{a:"$",c:"#F59E0B",v:ag.ads?.metrics?.weekConversions||0,l:"ventas",on:ag.ads?.online}].map((s,i)=><div key={i} style={{display:"flex",alignItems:"center",flex:1}}>
@@ -183,7 +575,7 @@ export default function Hub() {
             </div>
           </div>
 
-          {/* Two cols */}
+          {/* Two cols — Activity + Leader Chat */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div className="card" style={{padding:14}}>
               <h3 style={{fontSize:11,fontWeight:700,color:"#E2E8F0",marginBottom:8}}>Actividad reciente</h3>
@@ -381,7 +773,7 @@ export default function Hub() {
         {/* ═══ LOGS ═══ */}
         {sec==="logs"&&<div className="au"><div className="card" style={{padding:14}}><h3 style={{fontSize:11,fontWeight:700,color:"#E2E8F0",marginBottom:10}}>Historial de acciones</h3>{logs.length===0&&<div style={{padding:20,textAlign:"center",color:"#111827",fontSize:9}}>Sin acciones</div>}{logs.map((l,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 0",borderBottom:i<logs.length-1?"1px solid rgba(30,41,59,.1)":"none"}} className="sr"><div style={{width:5,height:5,borderRadius:"50%",background:l.type==="err"?"#EF4444":"#10B981",flexShrink:0}}/><div style={{flex:1,fontSize:10,color:"#CBD5E1"}}>{l.msg}</div><div style={{fontSize:8,color:"#111827",fontFamily:"monospace"}}>{l.time}</div></div>)}</div></div>}
 
-        <div style={{marginTop:28,paddingTop:10,borderTop:"1px solid rgba(30,41,59,.1)",display:"flex",justifyContent:"space-between",fontSize:7,color:"#080D17"}}><span>Kily&apos;s Agents — Oficina Virtual v5</span><span>{agents.length} agentes — refresh {cd}s</span></div>
+        <div style={{marginTop:28,paddingTop:10,borderTop:"1px solid rgba(30,41,59,.1)",display:"flex",justifyContent:"space-between",fontSize:7,color:"#080D17"}}><span>Kily&apos;s Agents — Oficina Virtual v6</span><span>{agents.length} agentes — refresh {cd}s</span></div>
       </div>
     </div>
   </>);
