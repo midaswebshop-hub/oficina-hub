@@ -1,7 +1,8 @@
-// pages/api/hub.js — API CENTRAL v6
+// pages/api/hub.js — API CENTRAL v7 (Leader AI)
 import { AGENTS, fetchAgent, fetchAllStatus, postAgent, leaderAnalyze, getCampaigns, toggleCampaign, getCampaignMetrics } from "../../lib/agents";
 import { getShopifyOverview } from "../../lib/shopify";
 import { workflowLaunchProduct, workflowHealthCheck } from "../../lib/workflow";
+import { analyzeAgent, generateLeaderReport, suggestImprovements, leaderChat } from "../../lib/leader_ai";
 
 export default async function handler(req, res) {
   const action = req.query.action;
@@ -77,6 +78,35 @@ export default async function handler(req, res) {
     // HEALTH CHECK
     if (action === "health-check") return res.json(await workflowHealthCheck());
 
+    // ─── LEADER AI ENDPOINTS ──────────────────────────────────
+    // Full AI report — GET /api/hub?action=leader-report
+    if (action === "leader-report") {
+      const [raw, shopData] = await Promise.all([fetchAllStatus(), getShopifyOverview().catch(() => null)]);
+      const staticLeader = leaderAnalyze(raw, shopData);
+      try {
+        const aiReport = await generateLeaderReport(raw, shopData);
+        return res.json({ source: "gemini", ...aiReport, staticFallback: staticLeader });
+      } catch {
+        return res.json({ source: "static", ...staticLeader });
+      }
+    }
+
+    // Analyze single agent — GET /api/hub?action=leader-analyze&agent=dropshipping
+    if (action === "leader-analyze") {
+      const agentId = req.query.agent;
+      if (!agentId) return res.status(400).json({ error: "Falta parametro agent" });
+      const agent = AGENTS.find(a => a.id === agentId);
+      if (!agent?.url) return res.status(404).json({ error: `Agente ${agentId} no encontrado` });
+      const r = await fetchAgent(agent.url, agent.endpoints.status);
+      const statusData = { online: r.ok, data: r.ok ? r.data : null, error: r.ok ? null : r.error };
+      try {
+        const analysis = await analyzeAgent(agentId, statusData);
+        return res.json({ source: "gemini", agentId, ...analysis });
+      } catch {
+        return res.json({ source: "static", agentId, score: 0, health: "unknown", error: "Gemini no disponible" });
+      }
+    }
+
     // AGENT CONFIG (read)
     if (action === "agent-config" && req.method === "GET") {
       const agentId = req.query.agent;
@@ -92,6 +122,38 @@ export default async function handler(req, res) {
       if (action === "run-search") return res.json(await postAgent(AGENTS[0].url, "/api/agent?action=run", {}));
       if (action === "run-landings") return res.json(await postAgent(AGENTS[1].url, "/api/landing?action=auto-create", {}));
       if (action === "run-monitor") return res.json(await postAgent(AGENTS[2].url, "/api/ads?action=monitor", {}));
+
+      // Leader AI: improvements — POST /api/hub?action=leader-improve&agent=dropshipping
+      if (action === "leader-improve") {
+        const agentId = req.query.agent;
+        if (!agentId) return res.status(400).json({ error: "Falta parametro agent" });
+        const agent = AGENTS.find(a => a.id === agentId);
+        if (!agent?.url) return res.status(404).json({ error: `Agente ${agentId} no encontrado` });
+        const r = await fetchAgent(agent.url, agent.endpoints.status);
+        const statusData = { online: r.ok, data: r.ok ? r.data : null };
+        const recentHistory = req.body?.history || null;
+        try {
+          const result = await suggestImprovements(agentId, statusData, recentHistory);
+          return res.json({ source: "gemini", agentId, ...result });
+        } catch {
+          return res.json({ source: "static", agentId, improvements: [], error: "Gemini no disponible" });
+        }
+      }
+
+      // Leader AI: chat — POST /api/hub?action=leader-chat body:{message}
+      if (action === "leader-chat") {
+        const { message } = req.body || {};
+        if (!message) return res.status(400).json({ error: "Falta message en el body" });
+        const [raw, shopData] = await Promise.all([fetchAllStatus(), getShopifyOverview().catch(() => null)]);
+        const staticLeader = leaderAnalyze(raw, shopData);
+        const context = { agentStatus: raw, shopify: shopData, leaderAnalysis: staticLeader };
+        try {
+          const result = await leaderChat(message, context);
+          return res.json({ source: "gemini", ...result });
+        } catch {
+          return res.json({ source: "static", response: "No puedo responder en este momento. Gemini API no disponible.", suggestions: [], relatedAgents: [] });
+        }
+      }
       if (action === "workflow-launch") return res.json(await workflowLaunchProduct(req.body || {}));
 
       // Toggle campaign
