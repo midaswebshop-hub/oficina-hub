@@ -3,6 +3,7 @@ import { AGENTS, fetchAgent, fetchAllStatus, postAgent, leaderAnalyze, getCampai
 import { getShopifyOverview } from "../../lib/shopify";
 import { workflowLaunchProduct, workflowHealthCheck } from "../../lib/workflow";
 import { analyzeAgent, generateLeaderReport, suggestImprovements, leaderChat } from "../../lib/leader_ai";
+import { processNewCODOrder, confirmOrder, cancelOrder, listPendingConfirmations } from "../../lib/cod_confirmer";
 
 export default async function handler(req, res) {
   const action = req.query.action;
@@ -77,6 +78,9 @@ export default async function handler(req, res) {
 
     // HEALTH CHECK
     if (action === "health-check") return res.json(await workflowHealthCheck());
+
+    // COD: listar confirmaciones pendientes
+    if (action === "cod-pending") return res.json(await listPendingConfirmations());
 
     // ─── LEADER AI ENDPOINTS ──────────────────────────────────
     // Full AI report — GET /api/hub?action=leader-report
@@ -162,6 +166,29 @@ export default async function handler(req, res) {
         if (!id) return res.status(400).json({ error: "Falta id" });
         const r = await toggleCampaign(id, activate);
         return res.json(r);
+      }
+
+      // ─── COD CONFIRMER ────────────────────────────────
+      // Webhook: nuevo pedido COD
+      if (action === "cod-order") {
+        const result = await processNewCODOrder(req.body);
+        return res.json(result);
+      }
+
+      // Confirmar pedido
+      if (action === "cod-confirm") {
+        const { orderNumber } = req.body;
+        if (!orderNumber) return res.status(400).json({ error: "Falta orderNumber" });
+        const result = await confirmOrder(orderNumber);
+        return res.json(result);
+      }
+
+      // Cancelar pedido
+      if (action === "cod-cancel") {
+        const { orderNumber, reason } = req.body;
+        if (!orderNumber) return res.status(400).json({ error: "Falta orderNumber" });
+        const result = await cancelOrder(orderNumber, reason || "manual");
+        return res.json(result);
       }
 
       // Agent config update
