@@ -31,6 +31,14 @@ export default function Hub() {
   const [wfResult,setWfResult]=useState(null);
   const [campaigns,setCampaigns]=useState([]);
   const [campLoading,setCampLoading]=useState(false);
+  // New modules state
+  const [auditData,setAuditData]=useState(null);
+  const [auditLoading,setAuditLoading]=useState(false);
+  const [contentResult,setContentResult]=useState(null);
+  const [contentLoading,setContentLoading]=useState(false);
+  const [contentType,setContentType]=useState("fb-posts");
+  const [codPending,setCodPending]=useState(null);
+  const [codLoading,setCodLoading]=useState(false);
 
   const show=(msg,type="ok")=>{setToast({msg,type});setLogs(p=>[{msg,type,time:new Date().toLocaleTimeString("es-CO")},...p].slice(0,50));setTimeout(()=>setToast(null),4000);};
 
@@ -63,6 +71,18 @@ export default function Hub() {
 
   async function loadCampaigns(){setCampLoading(true);try{const r=await fetch("/api/hub?action=campaigns").then(r=>r.json());setCampaigns(r.campaigns||[]);}catch{}setCampLoading(false);}
 
+  // ─── POLICY GUARDIAN ─────────────────────────────
+  async function runAudit(){setAuditLoading(true);try{const r=await fetch("https://ads-agent-nine.vercel.app/api/ads?action=audit").then(r=>r.json());setAuditData(r);show(r.ok?"Auditoría completada":"Error en auditoría",r.ok?"ok":"err");}catch(e){show("Error: "+e.message,"err");}setAuditLoading(false);}
+  async function runWeeklyAudit(){setAuditLoading(true);try{const r=await fetch("https://ads-agent-nine.vercel.app/api/ads?action=weekly-audit",{method:"POST"}).then(r=>r.json());setAuditData(r.health||r);show("Auditoría semanal enviada a Telegram");}catch(e){show("Error: "+e.message,"err");}setAuditLoading(false);}
+  async function pauseAll(){if(!confirm("¿PAUSAR TODAS las campañas? Esto es una acción de emergencia."))return;try{const r=await fetch("https://ads-agent-nine.vercel.app/api/ads?action=pause-all",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({reason:"Pausa manual desde Hub"})}).then(r=>r.json());show(r.ok?`${r.paused} campañas pausadas`:"Error",r.ok?"ok":"err");}catch(e){show("Error: "+e.message,"err");}}
+
+  // ─── CONTENT GENERATOR ─────────────────────────────
+  async function generateContent(type){setContentLoading(true);setContentResult(null);const productInfo={name:"Cargador 5 en 1 Para Carro",description:"Cargador magnético retráctil con 5 conectores (USB-C, Lightning, Micro USB, inalámbrico, USB-A). Carga rápida 66W. Compatible con todos los celulares.",price:"18,000",currency:"CRC",countryName:"Costa Rica",countryCode:"CR",hasCOD:true,shopifyUrl:"https://hy1jn3-vn.myshopify.com/products/cargador-5-en-1-para-carro",whatsappNumber:"",images:[],keyFeatures:["5 conectores","Carga rápida 66W","Magnético retráctil","Compatible universal"]};try{const r=await fetch(`https://ads-agent-nine.vercel.app/api/ads?action=${type}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(productInfo)}).then(r=>r.json());setContentResult({type,...r});show(r.ok?`Contenido generado (${type})`:"Error generando",r.ok?"ok":"err");}catch(e){show("Error: "+e.message,"err");}setContentLoading(false);}
+
+  // ─── COD CONFIRMER ─────────────────────────────────
+  async function loadCodPending(){setCodLoading(true);try{const r=await fetch("/api/hub?action=cod-pending").then(r=>r.json());setCodPending(r);show(r.ok?`${r.pending?.length||0} pendientes`:"Error",r.ok?"ok":"err");}catch(e){show("Error: "+e.message,"err");}setCodLoading(false);}
+  async function codAction(orderNumber,action){try{const r=await fetch(`/api/hub?action=cod-${action}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orderNumber})}).then(r=>r.json());show(r.ok?`Pedido #${orderNumber} ${action==="confirm"?"confirmado":"cancelado"}`:"Error",r.ok?"ok":"err");loadCodPending();}catch(e){show("Error: "+e.message,"err");}}
+
   async function toggleCamp(id,activate){show(activate?"Activando...":"Pausando...");try{const r=await fetch("/api/hub?action=toggle-campaign",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,activate})}).then(r=>r.json());show(r.ok?(activate?"Campana activada":"Campana pausada"):(r.error||"Error"),r.ok?"ok":"err");loadCampaigns();setTimeout(load,2000);}catch{show("Error","err");}}
 
   const agents=data?.agents?Object.values(data.agents):[];
@@ -81,7 +101,7 @@ export default function Hub() {
     return 0;
   }
 
-  const navs=[{id:"office",i:"OFF",l:"Oficina"},{id:"command",i:"CMD",l:"Comando"},{id:"campaigns",i:"ADS",l:"Campanas"},{id:"pipeline",i:"PIP",l:"Pipeline"},{id:"shopify",i:"SHP",l:"Shopify"},{id:"analytics",i:"ANL",l:"Analytics"},{id:"leader",i:"LDR",l:"Leader"},{id:"logs",i:"LOG",l:"Logs"}];
+  const navs=[{id:"office",i:"OFF",l:"Oficina"},{id:"command",i:"CMD",l:"Comando"},{id:"campaigns",i:"ADS",l:"Campanas"},{id:"guardian",i:"POL",l:"Guardian"},{id:"content",i:"ORG",l:"Contenido"},{id:"cod",i:"COD",l:"Pedidos"},{id:"pipeline",i:"PIP",l:"Pipeline"},{id:"shopify",i:"SHP",l:"Shopify"},{id:"analytics",i:"ANL",l:"Analytics"},{id:"leader",i:"LDR",l:"Leader"},{id:"logs",i:"LOG",l:"Logs"}];
   const dAgent=detail?agents.find(a=>a.id===detail):null;
 
   /* Agent character configs for office view */
@@ -686,6 +706,192 @@ export default function Hub() {
           {campaigns.length>0&&<div style={{display:"flex",gap:8,marginTop:14}}>
             <button className="btn" onClick={()=>runAction("run-monitor","Monitorear")} disabled={!!actLoad} style={{flex:1,color:"#7C3AED",borderColor:"#7C3AED15"}}>{actLoad==="run-monitor"?"...":"Ejecutar monitoreo (pause/scale automatico)"}</button>
           </div>}
+        </div>}
+
+        {/* ═══ POLICY GUARDIAN ═══ */}
+        {sec==="guardian"&&<div className="au">
+          {/* Header */}
+          <div className="card" style={{padding:16,marginBottom:14,borderLeft:"3px solid #EF4444"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div><h3 style={{fontSize:14,fontWeight:800,color:"#F1F5F9"}}>Policy Guardian</h3><p style={{fontSize:10,color:"#475569",marginTop:2}}>Protege tu Business Manager de Meta contra bans</p></div>
+              <div style={{display:"flex",gap:6}}>
+                <button className="btn" onClick={runAudit} disabled={auditLoading} style={{color:"#3B82F6",borderColor:"#3B82F620"}}>{auditLoading?"...":"Auditar cuenta"}</button>
+                <button className="btn" onClick={runWeeklyAudit} disabled={auditLoading} style={{color:"#F59E0B",borderColor:"#F59E0B20"}}>{auditLoading?"...":"Auditoría + Telegram"}</button>
+                <button className="btn" onClick={pauseAll} style={{color:"#EF4444",borderColor:"#EF444420"}}>PAUSAR TODO</button>
+              </div>
+            </div>
+          </div>
+
+          {/* Audit results */}
+          {auditData&&<div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
+            {[
+              {l:"Estado",v:auditData.status_name||"—",c:auditData.healthy?"#10B981":"#EF4444"},
+              {l:"Campañas",v:auditData.campaigns?.length||0,c:"#7C3AED"},
+              {l:"Gastado total",v:`$${((auditData.amount_spent||0)/100).toFixed(2)}`,c:"#F59E0B"},
+              {l:"Problemas",v:auditData.issues?.length||0,c:auditData.issues?.length>0?"#EF4444":"#10B981"},
+            ].map((k,i)=><div key={i} className="card" style={{padding:14,textAlign:"center",borderTop:`2px solid ${k.c}`}}><div style={{fontSize:7,color:"#334155",fontWeight:600,textTransform:"uppercase",marginBottom:4}}>{k.l}</div><div style={{fontSize:20,fontWeight:800,color:k.c}}>{k.v}</div></div>)}
+          </div>}
+
+          {auditData&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            {/* Issues */}
+            <div className="card" style={{padding:14}}>
+              <h3 style={{fontSize:11,fontWeight:700,color:"#E2E8F0",marginBottom:8}}>Problemas detectados</h3>
+              {(!auditData.issues||auditData.issues.length===0)&&<div style={{padding:20,textAlign:"center",color:"#10B981",fontSize:11,fontWeight:600}}>Sin problemas — cuenta sana</div>}
+              {(auditData.issues||[]).map((issue,i)=><div key={i} style={{padding:8,background:"rgba(239,68,68,.04)",borderRadius:6,borderLeft:"2px solid #EF4444",marginBottom:4,fontSize:10,color:"#CBD5E1"}}>{issue}</div>)}
+            </div>
+            {/* Campaigns */}
+            <div className="card" style={{padding:14}}>
+              <h3 style={{fontSize:11,fontWeight:700,color:"#E2E8F0",marginBottom:8}}>Campañas</h3>
+              {(auditData.campaigns||[]).length===0&&<div style={{padding:16,textAlign:"center",color:"#334155",fontSize:10}}>Sin campañas</div>}
+              {(auditData.campaigns||[]).map((c,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:6,borderBottom:"1px solid rgba(30,41,59,.1)"}}>
+                <span style={{fontSize:10,color:"#E2E8F0",fontWeight:600}}>{c.name}</span>
+                <span style={{fontSize:9,padding:"2px 6px",borderRadius:4,background:c.status==="ACTIVE"?"rgba(16,185,129,.08)":"rgba(245,158,11,.08)",color:c.status==="ACTIVE"?"#10B981":"#F59E0B",fontWeight:700}}>{c.status}</span>
+              </div>)}
+            </div>
+          </div>}
+
+          {/* Problem ads */}
+          {auditData?.problem_ads?.length>0&&<div className="card" style={{padding:14,marginTop:12,borderLeft:"3px solid #EF4444"}}>
+            <h3 style={{fontSize:11,fontWeight:700,color:"#EF4444",marginBottom:8}}>Ads con problemas</h3>
+            {auditData.problem_ads.map((ad,i)=><div key={i} style={{padding:8,background:"rgba(239,68,68,.04)",borderRadius:6,marginBottom:4}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#E2E8F0"}}>{ad.name}</div>
+              <div style={{fontSize:9,color:"#EF4444",fontWeight:600}}>{ad.status}</div>
+              {ad.feedback&&<div style={{fontSize:8,color:"#475569",marginTop:2}}>{JSON.stringify(ad.feedback)}</div>}
+            </div>)}
+          </div>}
+
+          {!auditData&&<div className="card" style={{padding:40,textAlign:"center"}}><div style={{fontSize:11,color:"#334155",marginBottom:8}}>Click &quot;Auditar cuenta&quot; para verificar el estado de tu Business Manager</div><div style={{fontSize:9,color:"#1E293B"}}>El Policy Guardian escanea automáticamente cada creativo antes de publicar</div></div>}
+        </div>}
+
+        {/* ═══ CONTENT GENERATOR ═══ */}
+        {sec==="content"&&<div className="au">
+          <div className="card" style={{padding:16,marginBottom:14,borderLeft:"3px solid #10B981"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div><h3 style={{fontSize:14,fontWeight:800,color:"#F1F5F9"}}>Content Generator</h3><p style={{fontSize:10,color:"#475569",marginTop:2}}>Genera contenido orgánico para vender sin ads — Cargador 5en1 CR</p></div>
+            </div>
+            <div style={{display:"flex",gap:6,marginTop:12}}>
+              {[{id:"fb-posts",l:"Posts Facebook",c:"#3B82F6",d:"5 posts para grupos"},{id:"reel-scripts",l:"Guiones Reels",c:"#EF4444",d:"3 guiones 30-60s"},{id:"whatsapp-content",l:"WhatsApp",c:"#10B981",d:"Estados + broadcast"}].map(t=>
+                <button key={t.id} onClick={()=>{setContentType(t.id);generateContent(t.id);}} disabled={contentLoading} className={contentType===t.id&&contentResult?"btn-glow":"btn"} style={{flex:1,padding:"10px 8px",fontSize:10,borderColor:`${t.c}20`,color:contentType===t.id?undefined:t.c}}>
+                  <div style={{fontWeight:700}}>{contentLoading&&contentType===t.id?"Generando...":t.l}</div>
+                  <div style={{fontSize:7,marginTop:2,opacity:.7}}>{t.d}</div>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* FB Posts result */}
+          {contentResult?.type==="fb-posts"&&contentResult.ok&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {contentResult.general_tips&&<div className="card" style={{padding:12,borderLeft:"2px solid #F59E0B"}}><div style={{fontSize:9,fontWeight:700,color:"#F59E0B",marginBottom:4}}>TIPS PARA PUBLICAR</div><div style={{fontSize:10,color:"#CBD5E1",lineHeight:1.5}}>{contentResult.general_tips}</div></div>}
+            {(contentResult.posts||[]).map((post,i)=><div key={i} className="card" style={{padding:14,animation:`fadeUp .3s ease ${i*.06}s both`}}>
+              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+                <span style={{fontSize:8,padding:"3px 8px",borderRadius:4,background:"rgba(59,130,246,.08)",color:"#3B82F6",fontWeight:700,textTransform:"uppercase"}}>{post.style}</span>
+                <span style={{fontSize:8,color:"#475569"}}>{post.best_time}</span>
+                <span style={{fontSize:8,color:"#334155",marginLeft:"auto"}}>{post.best_groups}</span>
+              </div>
+              <div style={{padding:12,background:"rgba(3,7,18,.4)",borderRadius:8,fontSize:11,color:"#E2E8F0",lineHeight:1.6,whiteSpace:"pre-wrap",fontFamily:"system-ui"}}>{post.text}</div>
+              <button className="btn" onClick={()=>{navigator.clipboard.writeText(post.text);show("Post copiado al portapapeles");}} style={{marginTop:8,fontSize:9,color:"#10B981",borderColor:"#10B98120"}}>Copiar texto</button>
+            </div>)}
+          </div>}
+
+          {/* Reel Scripts result */}
+          {contentResult?.type==="reel-scripts"&&contentResult.ok&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {contentResult.filming_tips&&<div className="card" style={{padding:12,borderLeft:"2px solid #F59E0B"}}><div style={{fontSize:9,fontWeight:700,color:"#F59E0B",marginBottom:4}}>TIPS DE GRABACIÓN</div><div style={{fontSize:10,color:"#CBD5E1",lineHeight:1.5}}>{contentResult.filming_tips}</div></div>}
+            {(contentResult.scripts||[]).map((script,i)=><div key={i} className="card" style={{padding:14,animation:`fadeUp .3s ease ${i*.06}s both`}}>
+              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+                <span style={{fontSize:8,padding:"3px 8px",borderRadius:4,background:"rgba(239,68,68,.08)",color:"#EF4444",fontWeight:700,textTransform:"uppercase"}}>{script.style}</span>
+                <span style={{fontSize:9,color:"#475569"}}>{script.duration}</span>
+                <span style={{fontSize:8,color:"#334155",marginLeft:"auto"}}>{script.music_style}</span>
+              </div>
+              <div style={{padding:8,background:"rgba(239,68,68,.04)",borderRadius:6,marginBottom:8}}>
+                <div style={{fontSize:8,fontWeight:700,color:"#EF4444",marginBottom:2}}>HOOK (3 primeros segundos)</div>
+                <div style={{fontSize:11,color:"#F1F5F9",fontWeight:600}}>{script.hook}</div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                {(script.scenes||[]).map((scene,j)=><div key={j} style={{display:"grid",gridTemplateColumns:"60px 1fr 1fr 1fr",gap:6,padding:6,background:"rgba(3,7,18,.3)",borderRadius:4,fontSize:9}}>
+                  <span style={{color:"#7C3AED",fontWeight:700}}>{scene.time}</span>
+                  <span style={{color:"#CBD5E1"}}>{scene.visual}</span>
+                  <span style={{color:"#94A3B8"}}>{scene.audio}</span>
+                  <span style={{color:"#F59E0B",fontWeight:600}}>{scene.text_overlay}</span>
+                </div>)}
+              </div>
+              {script.caption&&<div style={{marginTop:8,padding:8,background:"rgba(3,7,18,.3)",borderRadius:6}}><div style={{fontSize:8,color:"#475569",fontWeight:600,marginBottom:2}}>CAPTION</div><div style={{fontSize:10,color:"#CBD5E1"}}>{script.caption}</div></div>}
+            </div>)}
+          </div>}
+
+          {/* WhatsApp result */}
+          {contentResult?.type==="whatsapp-content"&&contentResult.ok&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div>
+              <h3 style={{fontSize:11,fontWeight:700,color:"#E2E8F0",marginBottom:8}}>Estados WhatsApp</h3>
+              {(contentResult.status_messages||[]).map((msg,i)=><div key={i} className="card" style={{padding:12,marginBottom:8}}>
+                <div style={{padding:10,background:"rgba(16,185,129,.04)",borderRadius:8,fontSize:11,color:"#E2E8F0",lineHeight:1.5,whiteSpace:"pre-wrap"}}>{msg.text}</div>
+                {msg.image_suggestion&&<div style={{fontSize:8,color:"#475569",marginTop:4}}>Imagen: {msg.image_suggestion}</div>}
+                <button className="btn" onClick={()=>{navigator.clipboard.writeText(msg.text);show("Copiado");}} style={{marginTop:6,fontSize:8,color:"#10B981",borderColor:"#10B98120"}}>Copiar</button>
+              </div>)}
+            </div>
+            <div>
+              <h3 style={{fontSize:11,fontWeight:700,color:"#E2E8F0",marginBottom:8}}>Broadcast</h3>
+              {(contentResult.broadcast_messages||[]).map((msg,i)=><div key={i} className="card" style={{padding:12,marginBottom:8}}>
+                <div style={{fontSize:8,color:"#F59E0B",fontWeight:600,marginBottom:4}}>Mejor hora: {msg.send_time}</div>
+                <div style={{padding:10,background:"rgba(16,185,129,.04)",borderRadius:8,fontSize:11,color:"#E2E8F0",lineHeight:1.5,whiteSpace:"pre-wrap"}}>{msg.text}</div>
+                <button className="btn" onClick={()=>{navigator.clipboard.writeText(msg.text);show("Copiado");}} style={{marginTop:6,fontSize:8,color:"#10B981",borderColor:"#10B98120"}}>Copiar</button>
+              </div>)}
+              {contentResult.tips&&<div className="card" style={{padding:10,borderLeft:"2px solid #F59E0B"}}><div style={{fontSize:8,fontWeight:700,color:"#F59E0B",marginBottom:2}}>TIPS</div><div style={{fontSize:9,color:"#CBD5E1"}}>{contentResult.tips}</div></div>}
+            </div>
+          </div>}
+
+          {/* Error state */}
+          {contentResult&&!contentResult.ok&&<div className="card" style={{padding:20,textAlign:"center",borderLeft:"3px solid #EF4444"}}><div style={{fontSize:11,color:"#EF4444",fontWeight:700}}>Error generando contenido</div><div style={{fontSize:9,color:"#475569",marginTop:4}}>{contentResult.error}</div></div>}
+
+          {!contentResult&&!contentLoading&&<div className="card" style={{padding:40,textAlign:"center"}}><div style={{fontSize:11,color:"#334155",marginBottom:8}}>Selecciona un tipo de contenido para generar</div><div style={{fontSize:9,color:"#1E293B"}}>El contenido se genera con IA para el Cargador 5en1 en Costa Rica</div></div>}
+          {contentLoading&&<div className="card" style={{padding:40,textAlign:"center"}}><div style={{fontSize:12,color:"#7C3AED",fontWeight:700,animation:"pulse 1.5s infinite"}}>Generando contenido con Gemini...</div><div style={{fontSize:9,color:"#475569",marginTop:4}}>Esto puede tomar 10-20 segundos</div></div>}
+        </div>}
+
+        {/* ═══ COD CONFIRMER ═══ */}
+        {sec==="cod"&&<div className="au">
+          <div className="card" style={{padding:16,marginBottom:14,borderLeft:"3px solid #F59E0B"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div><h3 style={{fontSize:14,fontWeight:800,color:"#F1F5F9"}}>COD Confirmer</h3><p style={{fontSize:10,color:"#475569",marginTop:2}}>Confirma pedidos contra entrega para bajar RTS de 15% a ~8%</p></div>
+              <button className="btn" onClick={loadCodPending} disabled={codLoading} style={{color:"#F59E0B",borderColor:"#F59E0B20"}}>{codLoading?"...":"Cargar pendientes"}</button>
+            </div>
+          </div>
+
+          {/* Stats */}
+          {codPending&&<div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}}>
+            <div className="card" style={{padding:14,textAlign:"center",borderTop:"2px solid #F59E0B"}}><div style={{fontSize:7,color:"#334155",fontWeight:600,textTransform:"uppercase",marginBottom:4}}>Pendientes</div><div style={{fontSize:24,fontWeight:800,color:"#F59E0B"}}>{codPending.pending?.length||0}</div></div>
+            <div className="card" style={{padding:14,textAlign:"center",borderTop:"2px solid #EF4444"}}><div style={{fontSize:7,color:"#334155",fontWeight:600,textTransform:"uppercase",marginBottom:4}}>Auto-cancelados (48h)</div><div style={{fontSize:24,fontWeight:800,color:"#EF4444"}}>{codPending.auto_cancelled||0}</div></div>
+            <div className="card" style={{padding:14,textAlign:"center",borderTop:"2px solid #7C3AED"}}><div style={{fontSize:7,color:"#334155",fontWeight:600,textTransform:"uppercase",marginBottom:4}}>Total procesados</div><div style={{fontSize:24,fontWeight:800,color:"#7C3AED"}}>{codPending.total||0}</div></div>
+          </div>}
+
+          {/* Pending list */}
+          {codPending?.pending?.length>0&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {codPending.pending.map((req,i)=><div key={i} className="card" style={{padding:14,borderLeft:"3px solid #F59E0B",animation:`fadeUp .3s ease ${i*.06}s both`}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                <div>
+                  <span style={{fontSize:13,fontWeight:700,color:"#F1F5F9"}}>Pedido #{req.order_id}</span>
+                  <span style={{fontSize:9,color:"#475569",marginLeft:8}}>{req.customer_name}</span>
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  <button className="btn-glow" onClick={()=>codAction(req.order_id,"confirm")} style={{padding:"6px 14px",fontSize:10}}>Confirmar</button>
+                  <button className="btn" onClick={()=>codAction(req.order_id,"cancel")} style={{color:"#EF4444",borderColor:"#EF444420",fontSize:10}}>Cancelar</button>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:12,fontSize:9,color:"#475569"}}>
+                <span>Tel: {req.customer_phone}</span>
+                <span>País: {req.country}</span>
+                <span>Creado: {timeAgo(req.created_at)}</span>
+                <span>Expira: {timeAgo(req.expires_at)}</span>
+              </div>
+              {req.message_sent&&<div style={{marginTop:8,padding:10,background:"rgba(3,7,18,.4)",borderRadius:8}}>
+                <div style={{fontSize:8,color:"#10B981",fontWeight:700,marginBottom:4}}>Mensaje para WhatsApp:</div>
+                <div style={{fontSize:10,color:"#CBD5E1",lineHeight:1.5,whiteSpace:"pre-wrap"}}>{req.message_sent}</div>
+                <button className="btn" onClick={()=>{navigator.clipboard.writeText(req.message_sent);show("Mensaje copiado");}} style={{marginTop:6,fontSize:8,color:"#10B981",borderColor:"#10B98120"}}>Copiar mensaje</button>
+              </div>}
+            </div>)}
+          </div>}
+
+          {codPending&&codPending.pending?.length===0&&<div className="card" style={{padding:40,textAlign:"center"}}><div style={{fontSize:24,marginBottom:8}}>✓</div><div style={{fontSize:12,color:"#10B981",fontWeight:700}}>Sin pedidos pendientes</div><div style={{fontSize:9,color:"#475569",marginTop:4}}>Cuando llegue un pedido COD, aparecerá aquí con el mensaje de WhatsApp listo para copiar</div></div>}
+
+          {!codPending&&<div className="card" style={{padding:40,textAlign:"center"}}><div style={{fontSize:11,color:"#334155",marginBottom:8}}>Click &quot;Cargar pendientes&quot; para ver pedidos por confirmar</div><div style={{fontSize:9,color:"#1E293B"}}>Cada pedido COD se confirma por WhatsApp antes de enviar a Dropi</div><div style={{fontSize:9,color:"#1E293B",marginTop:4}}>Si no responden en 48h, se cancela automáticamente</div></div>}
         </div>}
 
         {/* ═══ PIPELINE ═══ */}
